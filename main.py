@@ -47,13 +47,11 @@ class TestUrbanRoutes:
         print("function created for order blanket and handkerchiefs")
         pass
 
-
     def test_order_2_ice_creams(self):
         for i in range(2):
-              # Add in S8
-              print("function created for order 2 ice creams")
-              pass
-
+            # Add in S8
+            print("function created for order 2 ice creams")
+            pass
 
     def test_car_search_model_appears(self):
         # Add in S8
