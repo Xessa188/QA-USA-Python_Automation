@@ -1,5 +1,5 @@
-# ⚠️ Replace the URL link below with your current active sandbox URL link from TripleTen
-urban_routes_url = 'https://cnt-d4bc7328-ca69-42d5-98a7-9ac850a01c65.containerhub.tripleten-services.com'
+# Replace the URL link below with your current active sandbox URL link from TripleTen
+urban_routes_url = 'https://cnt-cb5f6878-046d-47ce-8177-03cbc8ac6d08.containerhub.tripleten-services.com'
 
 address_from = 'East 2nd Street, 601'
 address_to = '1300 1st St'

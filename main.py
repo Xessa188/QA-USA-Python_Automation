@@ -1,138 +1,168 @@
-import time
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 import data
 import helpers
+from selenium import webdriver
 from pages import UrbanRoutesPage
 
 
 class TestUrbanRoutes:
 
-    def setup_method(self, method):
-        chrome_options = Options()
-        chrome_options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
-
-        self.driver = webdriver.Chrome(options=chrome_options)
-        self.driver.implicitly_wait(10)
-
-        if data.urban_routes_url:
-            self.driver.get(data.urban_routes_url)
+    @classmethod
+    def setup_class(cls):
+        # do not modify - we need additional logging enabled in order to retrieve phone confirmation code
+        from selenium.webdriver import DesiredCapabilities
+        capabilities = DesiredCapabilities.CHROME
+        capabilities["goog:loggingPrefs"] = {'performance': 'ALL'}
+        cls.driver = webdriver.Chrome()
+        if helpers.is_url_reachable(data.urban_routes_url):
+            print("Connected to Urban Routes server")
         else:
-            print("Error: urban_routes_url is missing in data.py")
+            print("Cannot connect to Urban Routes. Check the server is on and still running")
 
-        self.routes_page = UrbanRoutesPage(self.driver)
-
-    # Test Case 1
     def test_set_route(self):
-        self.routes_page.enter_from_location(data.address_from)
-        self.routes_page.enter_to_location(data.address_to)
-        time.sleep(1)
-        assert self.routes_page.get_from_value() == data.address_from
-        assert self.routes_page.get_to_value() == data.address_to
+        self.driver.get(data.urban_routes_url)
+        pages = UrbanRoutesPage(self.driver)
+        pages.input_from_address(data.address_from)
+        pages.input_to_address(data.address_to)
+        assert pages.get_from_address() == data.address_from
+        assert pages.get_to_address() == data.address_to
 
-    # Test Case 2
     def test_select_plan(self):
-        self.routes_page.enter_from_location(data.address_from)
-        self.routes_page.enter_to_location(data.address_to)
-        self.routes_page.click_call_a_taxi_main_button()
-        self.routes_page.select_supportive_tariff()
-        time.sleep(1)
+        self.driver.get(data.urban_routes_url)
+        pages = UrbanRoutesPage(self.driver)
+        pages.input_from_address(data.address_from)
+        pages.input_to_address(data.address_to)
+        pages.click_call_a_taxi_button()
+        pages.click_supportive_plan_button()
+        assert pages.get_supportive_plan() == "Supportive"
 
-    # Test Case 3
     def test_fill_phone_number(self):
-        self.routes_page.enter_from_location(data.address_from)
-        self.routes_page.enter_to_location(data.address_to)
-        self.routes_page.click_call_a_taxi_main_button()
-        self.routes_page.select_supportive_tariff()
+        self.driver.get(data.urban_routes_url)
+        pages = UrbanRoutesPage(self.driver)
+        pages.input_from_address(data.address_from)
+        pages.input_to_address(data.address_to)
+        pages.click_call_a_taxi_button()
+        pages.click_supportive_plan_button()
+        pages.click_phone_number()
+        pages.write_phone_number(data.phone_number)
+        pages.click_next_button()
+        pages.write_code(helpers.retrieve_phone_code(self.driver))
+        pages.click_confirm()
+        assert pages.get_phone_number() == data.phone_number
 
-        self.routes_page.click_phone_button()
-        self.routes_page.fill_phone_number(data.phone_number)
-        assert self.routes_page.get_phone_field_value() == data.phone_number
-        self.routes_page.click_phone_next()
-        time.sleep(2)
 
-        sms_token = helpers.retrieve_phone_code(self.driver)
-        self.routes_page.enter_sms_code(sms_token)
-        self.routes_page.click_sms_confirm()
-        time.sleep(1)
-
-    # Test Case 4
     def test_fill_card(self):
-        self.routes_page.enter_from_location(data.address_from)
-        self.routes_page.enter_to_location(data.address_to)
-        self.routes_page.click_call_a_taxi_main_button()
-        self.routes_page.select_supportive_tariff()
+        self.driver.get(data.urban_routes_url)
+        pages = UrbanRoutesPage(self.driver)
+        pages.input_from_address(data.address_from)
+        pages.input_to_address(data.address_to)
+        pages.click_call_a_taxi_button()
+        pages.click_supportive_plan_button()
+        pages.click_phone_number()
+        pages.write_phone_number(data.phone_number)
+        pages.click_next_button()
+        pages.write_code(helpers.retrieve_phone_code(self.driver))
+        pages.click_confirm()
+        pages.click_payment_method()
+        pages.add_card()
+        pages.card_number_field(data.card_number)
+        pages.card_code_field(data.card_code)
+        pages.link_card_button()
+        pages.close_payment_method()
+        assert pages.get_card_number() == data.card_number
+        assert pages.get_card_code() == data.card_code
 
-        self.routes_page.click_phone_button()
-        self.routes_page.fill_phone_number(data.phone_number)
-        self.routes_page.click_phone_next()
-        sms_token = helpers.retrieve_phone_code(self.driver)
-        self.routes_page.enter_sms_code(sms_token)
-        self.routes_page.click_sms_confirm()
-        time.sleep(1)
 
-        self.routes_page.click_payment_method()
-        assert self.routes_page.is_payment_modal_displayed() is True
-        self.routes_page.click_add_card()
-        self.routes_page.fill_card_details(data.card_number, data.card_code)
-        time.sleep(1)
-        assert self.routes_page.is_link_button_clickable() is True
-        self.routes_page.click_link_card()
-        time.sleep(1)
-        self.routes_page.close_payment_modal()
-        time.sleep(1)
-        assert self.routes_page.get_payment_method_text() == "Card"
 
-    # Test Case 5
-    def test_comment_for_driver(self):
-        self.routes_page.enter_from_location(data.address_from)
-        self.routes_page.enter_to_location(data.address_to)
-        self.routes_page.click_call_a_taxi_main_button()
-        self.routes_page.select_supportive_tariff()
+    def test_message_to_driver_option(self):
+        self.driver.get(data.urban_routes_url)
+        pages = UrbanRoutesPage(self.driver)
+        pages.input_from_address(data.address_from)
+        pages.input_to_address(data.address_to)
+        pages.click_call_a_taxi_button()
+        pages.click_supportive_plan_button()
+        pages.click_phone_number()
+        pages.write_phone_number(data.phone_number)
+        pages.click_next_button()
+        pages.write_code(helpers.retrieve_phone_code(self.driver))
+        pages.click_confirm()
+        pages.click_payment_method()
+        pages.add_card()
+        pages.card_number_field(data.card_number)
+        pages.card_code_field(data.card_code)
+        pages.link_card_button()
+        pages.close_payment_method()
+        pages.message_to_driver_field(data.message_for_driver)
+        assert pages.get_message_to_driver_field() == data.message_for_driver
 
-        self.routes_page.enter_driver_comment(data.message_for_driver)
-        assert self.routes_page.get_driver_comment_value() == data.message_for_driver
-        time.sleep(1)
+    def test_blankets_and_handkerchiefs(self):
+        self.driver.get(data.urban_routes_url)
+        pages = UrbanRoutesPage(self.driver)
+        pages.input_from_address(data.address_from)
+        pages.input_to_address(data.address_to)
+        pages.click_call_a_taxi_button()
+        pages.click_supportive_plan_button()
+        pages.click_phone_number()
+        pages.write_phone_number(data.phone_number)
+        pages.click_next_button()
+        pages.write_code(helpers.retrieve_phone_code(self.driver))
+        pages.click_confirm()
+        pages.click_payment_method()
+        pages.add_card()
+        pages.card_number_field(data.card_number)
+        pages.card_code_field(data.card_code)
+        pages.link_card_button()
+        pages.close_payment_method()
+        pages.message_to_driver_field(data.message_for_driver)
+        pages.blankets_and_handkerchiefs_slider()
+        assert pages.is_blankets_and_handkerchiefs_slider()
 
-    # Test Case 6
-    def test_order_blanket_and_handkerchiefs(self):
-        self.routes_page.enter_from_location(data.address_from)
-        self.routes_page.enter_to_location(data.address_to)
-        self.routes_page.click_call_a_taxi_main_button()
-        self.routes_page.select_supportive_tariff()
-
-        self.routes_page.toggle_blanket_option()
-        assert self.routes_page.is_blanket_property_checked() is True
-        time.sleep(1)
-
-    # Test Case 7
     def test_order_2_ice_creams(self):
-        self.routes_page.enter_from_location(data.address_from)
-        self.routes_page.enter_to_location(data.address_to)
-        self.routes_page.click_call_a_taxi_main_button()
-        self.routes_page.select_supportive_tariff()
+        self.driver.get(data.urban_routes_url)
+        pages = UrbanRoutesPage(self.driver)
+        pages.input_from_address(data.address_from)
+        pages.input_to_address(data.address_to)
+        pages.click_call_a_taxi_button()
+        pages.click_supportive_plan_button()
+        pages.click_phone_number()
+        pages.write_phone_number(data.phone_number)
+        pages.click_next_button()
+        pages.write_code(helpers.retrieve_phone_code(self.driver))
+        pages.click_confirm()
+        pages.click_payment_method()
+        pages.add_card()
+        pages.card_number_field(data.card_number)
+        pages.card_code_field(data.card_code)
+        pages.link_card_button()
+        pages.close_payment_method()
+        pages.message_to_driver_field(data.message_for_driver)
+        pages.blankets_and_handkerchiefs_slider()
+        pages.order_2_ice_creams()
+        assert pages.ice_cream_count() == "2"
 
-        self.routes_page.order_ice_creams(2)
-        assert self.routes_page.get_ice_cream_count() == "2"
-        time.sleep(1)
+    def test_click_order_button(self):
+        self.driver.get(data.urban_routes_url)
+        pages = UrbanRoutesPage(self.driver)
+        pages.input_from_address(data.address_from)
+        pages.input_to_address(data.address_to)
+        pages.click_call_a_taxi_button()
+        pages.click_supportive_plan_button()
+        pages.click_phone_number()
+        pages.write_phone_number(data.phone_number)
+        pages.click_next_button()
+        pages.write_code(helpers.retrieve_phone_code(self.driver))
+        pages.click_confirm()
+        pages.click_payment_method()
+        pages.add_card()
+        pages.card_number_field(data.card_number)
+        pages.card_code_field(data.card_code)
+        pages.link_card_button()
+        pages.close_payment_method()
+        pages.message_to_driver_field(data.message_for_driver)
+        pages.blankets_and_handkerchiefs_slider()
+        pages.order_2_ice_creams()
+        pages.click_order_button()
+        assert pages.car_search_modal()
 
-    # Test Case 8
-    def test_car_search_model_appears(self):
-        self.routes_page.enter_from_location(data.address_from)
-        self.routes_page.enter_to_location(data.address_to)
-        self.routes_page.click_call_a_taxi_main_button()
-        self.routes_page.select_supportive_tariff()
-
-        self.routes_page.click_phone_button()
-        self.routes_page.fill_phone_number(data.phone_number)
-        self.routes_page.click_phone_next()
-        sms_token = helpers.retrieve_phone_code(self.driver)
-        self.routes_page.enter_sms_code(sms_token)
-        self.routes_page.click_sms_confirm()
-        time.sleep(1)
-
-        self.routes_page.click_order_taxi()
-        assert self.routes_page.is_car_search_visible() is True
-
-    def teardown_method(self):
-        self.driver.quit()
+        @classmethod
+        def teardown_class(cls):
+            cls.driver.quit()
